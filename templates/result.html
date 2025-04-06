@@ -1,28 +1,63 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-md mx-auto">
-    <div class="bg-white p-6 rounded-lg shadow-md text-center">
-        <h2 class="text-3xl mb-4 font-bold">Risultato Finale</h2>
-        
-        <div class="mb-6">
-            <div class="text-6xl font-bold text-blue-600 mb-2">
-                {{ score }}/{{ total }}
+<div class="max-w-3xl mx-auto">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl mb-4 font-bold">Risultato Finale</h2>
+            
+            <div class="mb-6">
+                <div class="text-6xl font-bold text-blue-600 mb-2">
+                    {{ score }}/{{ total }}
+                </div>
+                <div class="text-xl text-gray-600">
+                    {{ percent }}% Corrette
+                </div>
             </div>
-            <div class="text-xl text-gray-600">
-                {{ percent }}% Corrette
+
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-6">
+                <div class="bg-blue-600 h-4 rounded-full" 
+                     style="width: {{ percent }}%"></div>
             </div>
         </div>
 
-        <div class="w-full bg-gray-200 rounded-full h-4 mb-6">
-            <div class="bg-blue-600 h-4 rounded-full" 
-                 style="width: {{ percent }}%"></div>
+        <div class="space-y-8">
+            {% for result in results %}
+            <div class="border rounded-lg p-4 {% if result.user_answer == result.correct_answer %}bg-green-50 border-green-200{% else %}bg-red-50 border-red-200{% endif %}">
+                <h3 class="text-lg font-semibold mb-3">Domanda {{ loop.index }}: {{ result.text }}</h3>
+                
+                <div class="space-y-2">
+                    {% for option in result.options %}
+                    <div class="p-2 rounded-lg border
+                        {% if loop.index0 == result.correct_answer %} 
+                            bg-green-100 border-green-300
+                        {% elif loop.index0 == result.user_answer %} 
+                            bg-red-100 border-red-300
+                        {% else %}
+                            bg-gray-50 border-gray-200
+                        {% endif %}">
+                        <div class="flex items-center">
+                            <span class="mr-2 font-semibold">{{ ['A', 'B', 'C', 'D'][loop.index0] }}.</span>
+                            <span>{{ option }}</span>
+                            {% if loop.index0 == result.correct_answer %}
+                                <span class="ml-auto text-green-600">✓ Risposta corretta</span>
+                            {% elif loop.index0 == result.user_answer %}
+                                <span class="ml-auto text-red-600">✗ La tua risposta</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
         </div>
 
-        <a href="{{ url_for('index') }}" 
-           class="inline-block bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition">
-            ↩️ Nuovo Quiz
-        </a>
+        <div class="mt-8 text-center">
+            <a href="{{ url_for('index') }}" 
+               class="inline-block bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition">
+                ↩️ Nuovo Quiz
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

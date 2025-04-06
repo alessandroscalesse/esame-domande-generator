@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from flask_session import Session  # <-- Aggiunta importante
+from flask_session import Session
 import random
 import csv
 import os
@@ -11,27 +11,23 @@ from math import ceil
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# Configurazione modificata per le sessioni lato server
+# Configurazione
 app.config.update(
-    SESSION_TYPE='filesystem',          # Usa storage su filesystem
-    SESSION_FILE_DIR='./flask_session', # Cartella per salvare le sessioni
-    SESSION_PERMANENT=False,            # Sessioni non permanenti
-    SESSION_USE_SIGNER=True,            # Firma sicura dei cookie
+    SESSION_TYPE='filesystem',
+    SESSION_FILE_DIR='./flask_session',
+    SESSION_PERMANENT=False,
+    SESSION_USE_SIGNER=True,
     UPLOAD_FOLDER='uploads',
     ALLOWED_EXTENSIONS={'csv'},
     PERMANENT_SESSION_LIFETIME=3600
 )
 
-# Inizializza il sistema di sessioni
-Session(app)  # <-- Inizializzazione cruciale
-
+Session(app)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)  # Crea la cartella per le sessioni
-
+os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
 
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 class QuizManager:
     def __init__(self):
@@ -432,23 +428,28 @@ def delete_question(hash_id):
 @app.route('/quiz', methods=['POST'])
 def start_quiz():
     try:
-        num_q = int(request.form['question_count'])
-        total = len(quiz_manager.questions)
-        
-        # Applica il limite massimo di 60 domande
-        num_q = min(num_q, 60)
-        num_q = max(5, min(num_q, total))
-        num_q = (num_q // 5) * 5  # Arrotonda al multiplo di 5 più vicino
-        
-        session.clear()
+        num_q = min(int(request.form['question_count']), 60)
+        num_q = max(5, min(num_q, len(quiz_manager.questions)))
+        num_q = (num_q // 5) * 5
+
+        sampled_questions = random.sample(quiz_manager.questions, num_q)
+        shuffled_data = []
+        for q in sampled_questions:
+            options = q['options'].copy()
+            random.shuffle(options)
+            correct_idx = options.index(q['options'][q['correct']])
+            shuffled_data.append({
+                'options': options,
+                'correct_idx': correct_idx
+            })
+
         session.update({
-            'questions': random.sample(quiz_manager.questions, num_q),
-            'score': 0,
+            'questions': sampled_questions,
+            'answers': [None] * num_q,
             'current': 0,
             'total': num_q,
-            'shuffled': []
+            'shuffled': shuffled_data
         })
-        session.modified = True
         
         return redirect(url_for('show_quiz'))
     except Exception as e:
@@ -459,59 +460,73 @@ def start_quiz():
 def show_quiz():
     if 'questions' not in session:
         return redirect(url_for('index'))
-    
+
     try:
         if request.method == 'POST':
-            if 'answer' not in request.form:
-                flash("Seleziona una risposta!", 'error')
+            if 'answer' in request.form:
+                selected = int(request.form['answer'])
+                session['answers'][session['current']] = selected
+                session.modified = True
+
+            if 'finish' in request.form:
+                return redirect(url_for('result'))
+                
+            if session['current'] < session['total'] - 1:
+                session['current'] += 1
                 return redirect(url_for('show_quiz'))
-            
-            selected = int(request.form['answer'])
-            correct_idx = session['shuffled'][session['current']]
-            
-            if selected == correct_idx:
-                session['score'] += 1
-            
+            else:
+                return redirect(url_for('result'))
+
+        # Gestione navigazione GET
+        if 'q' in request.args:
+            new_current = int(request.args['q']) - 1
+            if 0 <= new_current < session['total']:
+                session['current'] = new_current
+                session.modified = True
+        elif 'prev' in request.args and session['current'] > 0:
+            session['current'] -= 1
+            session.modified = True
+        elif 'next' in request.args and session['current'] < session['total'] - 1:
             session['current'] += 1
             session.modified = True
-            
-            if session['current'] >= session['total']:
-                return redirect(url_for('result'))
+
+        current_data = {
+            'question': session['questions'][session['current']]['question'],
+            'options': session['shuffled'][session['current']]['options'],
+            'selected': session['answers'][session['current']],
+            'current_num': session['current'] + 1,
+            'total': session['total']
+        }
+
+        return render_template('quiz.html', **current_data)
         
-        current_q = session['questions'][session['current']]
-        options = current_q['options'].copy()
-        random.shuffle(options)
-        correct_idx = options.index(current_q['options'][current_q['correct']])
-        
-        if len(session['shuffled']) <= session['current']:
-            session['shuffled'].append(correct_idx)
-        else:
-            session['shuffled'][session['current']] = correct_idx
-        
-        session.modified = True
-        
-        return render_template('quiz.html',
-            question=current_q['question'],
-            options=options,
-            current=session['current'] + 1,
-            total=session['total'])
     except Exception as e:
-        print(f"ERRORE: {str(e)}")
         flash("Errore nel quiz, riavvia", 'error')
         return redirect(url_for('index'))
 
 @app.route('/result')
 def result():
-    if 'score' not in session:
+    if 'answers' not in session:
         return redirect(url_for('index'))
     
-    score = session['score']
-    total = session['total']
-    percent = round((score / total) * 100, 2) if total > 0 else 0
+    results = []
+    for i in range(session['total']):
+        question_data = {
+            'text': session['questions'][i]['question'],
+            'options': session['shuffled'][i]['options'],
+            'user_answer': session['answers'][i],
+            'correct_answer': session['shuffled'][i]['correct_idx']
+        }
+        results.append(question_data)
+    
+    score = sum(1 for i in range(session['total']) 
+              if session['answers'][i] == session['shuffled'][i]['correct_idx'])
+    
     return render_template('result.html',
                          score=score,
-                         total=total,
-                         percent=percent)
+                         total=session['total'],
+                         percent=round((score / session['total']) * 100, 2),
+                         results=results)
 
 if __name__ == '__main__':
     app.run(host='localhost', port=5000, debug=True)
