@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+<!-- templates/base.html -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Generator</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="{{ url_for('index') }}" class="text-2xl font-bold hover:text-blue-200 transition">
+                ← Quiz Generator
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="{{ url_for('show_duplicates') }}"
+                    class="bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200 transition">
+                    🧹 Duplicati
+                </a>
+                <a href="{{ url_for('reload_questions') }}"
+                    class="bg-white text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100 transition"
+                    title="Ricarica domande">
+                    ⟳ Ricarica
+                </a>
+                <span class="bg-blue-700 px-3 py-1 rounded-full">
+                    Domande: {{ question_count if question_count else 0 }}
+                </span>
+                <a href="{{ url_for('manage_questions') }}" 
+                class="bg-purple-100 text-purple-600 px-3 py-1 rounded hover:bg-purple-200 transition">
+                 📚 Tutte le Domande
+             </a>
+            </div>
+        </div>
+    </nav>
+    <div class="container mx-auto p-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div
+            class="mb-4 p-3 rounded-lg bg-{{ 'green' if category == 'success' else 'red' }}-100 text-{{ 'green' if category == 'success' else 'red' }}-800">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+</body>
+
+</html>

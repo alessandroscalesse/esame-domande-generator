@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+        <h2 class="text-3xl mb-4 font-bold">Risultato Finale</h2>
+        
+        <div class="mb-6">
+            <div class="text-6xl font-bold text-blue-600 mb-2">
+                {{ score }}/{{ total }}
+            </div>
+            <div class="text-xl text-gray-600">
+                {{ percent }}% Corrette
+            </div>
+        </div>
+
+        <div class="w-full bg-gray-200 rounded-full h-4 mb-6">
+            <div class="bg-blue-600 h-4 rounded-full" 
+                 style="width: {{ percent }}%"></div>
+        </div>
+
+        <a href="{{ url_for('index') }}" 
+           class="inline-block bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition">
+            ↩️ Nuovo Quiz
+        </a>
+    </div>
+</div>
+{% endblock %}

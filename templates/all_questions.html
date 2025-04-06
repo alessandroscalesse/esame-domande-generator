@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Gestione Domande ({{ total_questions }} totali)</h2>
+        <a href="{{ url_for('index') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            ← Torna alla Home
+        </a>
+    </div>
+
+    <!-- Controlli ricerca e paginazione -->
+    <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form method="GET" class="col-span-2">
+            <div class="flex">
+                <input type="text" name="search" placeholder="Cerca domande..." 
+                       value="{{ search_term }}" class="flex-1 p-2 border rounded-l focus:ring-2 focus:ring-blue-500">
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600 transition">
+                    🔍 Cerca
+                </button>
+            </div>
+        </form>
+        
+        <div class="flex items-center gap-4">
+            <span>Mostra:</span>
+            <select onchange="updatePerPage(this.value)" class="p-2 border rounded focus:ring-2 focus:ring-blue-500">
+                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+            </select>
+        </div>
+    </div>
+
+    {% include '_pagination.html' %}
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Domanda</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Opzioni</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Azioni</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for question in questions %}
+                {% set hash_id = quiz_manager.generate_hash(question['question'], question['options']) %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-normal">{{ question['question'] }}</td>
+                    <td class="px-6 py-4">
+                        <div class="grid grid-cols-2 gap-2">
+                            {% for option in question['options'] %}
+                            <div class="p-2 {% if loop.index0 == question['correct'] %}bg-green-100 border-green-300{% else %}bg-gray-50 border-gray-200{% endif %} rounded border">
+                                {{ loop.index }}. {{ option }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="{{ url_for('edit_question', hash_id=hash_id) }}" 
+                           class="text-blue-500 hover:text-blue-600 mr-2">✏️ Modifica</a>
+                        <a href="{{ url_for('delete_question', hash_id=hash_id) }}" 
+                           class="text-red-500 hover:text-red-600"
+                           onclick="return confirm('Sei sicuro di voler eliminare questa domanda?')">🗑️ Elimina</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include '_pagination.html' %}
+</div>
+
+<script>
+function updatePerPage(value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('per_page', value);
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}

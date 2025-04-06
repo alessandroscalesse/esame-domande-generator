@@ -1,0 +1,24 @@
+<!-- templates/upload.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-xl mb-4">Carica Domande da CSV</h2>
+    {% if message %}
+    <div class="mb-4 p-3 bg-{{ 'green' if success else 'red' }}-100 text-{{ 'green' if success else 'red' }}-800 rounded">
+        {{ message }}
+    </div>
+    {% endif %}
+    <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        <div>
+            <label class="block mb-2 font-medium">File CSV:</label>
+            <input type="file" name="csv_file" accept=".csv" required
+                   class="w-full p-2 border rounded">
+        </div>
+        <button type="submit" 
+                class="w-full bg-green-500 text-white p-3 rounded hover:bg-green-600 transition">
+            Carica CSV
+        </button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-2xl mb-6 font-bold">Modifica Domanda</h2>
+    
+    <form method="POST">
+        <div class="space-y-4">
+            <div>
+                <label class="block mb-2 font-medium">Domanda:</label>
+                <textarea name="question" required 
+                    class="w-full p-2 border rounded h-24">{{ question.question }}</textarea>
+            </div>
+            
+            {% for i in range(4) %}
+            <div>
+                <label class="block mb-2 font-medium">Opzione {{ i+1 }}:</label>
+                <input type="text" name="option{{ i+1 }}" 
+                    value="{{ question['option' ~ (i+1)] }}" required 
+                    class="w-full p-2 border rounded">
+            </div>
+            {% endfor %}
+            
+            <div>
+                <label class="block mb-2 font-medium">Risposta Corretta:</label>
+                <select name="correct" class="w-full p-2 border rounded">
+                    {% for i in range(4) %}
+                    <option value="{{ i }}" {% if i == question.correct %}selected{% endif %}>
+                        Opzione {{ i+1 }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="flex gap-4">
+                <button type="submit" 
+                    class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                    💾 Salva Modifiche
+                </button>
+                <a href="{{ url_for('manage_questions') }}" 
+                   class="bg-gray-200 text-gray-800 px-6 py-2 rounded hover:bg-gray-300">
+                    ❌ Annulla
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
