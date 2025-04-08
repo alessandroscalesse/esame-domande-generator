@@ -10,11 +10,9 @@
                 <div class="mb-4">
                     <label class="block text-lg mb-2 font-medium">Numero di domande:</label>
                     <div class="flex items-center gap-4">
-                        <input type="range" name="question_count" min="5" 
-                               max="{{ max_questions|min(60) }}" 
-                               value="{{ [max_questions|min(60), 5]|max }}" 
-                               step="5" class="w-full"
-                               oninput="document.getElementById('rangeValue').textContent = this.value">
+                        <input type="range" name="question_count" min="5" max="{{ max_questions|min(60) }}"
+                            value="{{ [max_questions|min(60), 5]|max }}" step="5" class="w-full"
+                            oninput="document.getElementById('rangeValue').textContent = this.value">
                         <span id="rangeValue" class="w-20 text-center font-bold">
                             {{ [max_questions|min(60), 5]|max }}
                         </span>
@@ -23,8 +21,8 @@
                         Seleziona da 5 a {{ max_questions|min(60) }} (multipli di 5)
                     </div>
                 </div>
-                <button type="submit" 
-                        class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition font-bold">
+                <button type="submit"
+                    class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition font-bold">
                     🚀 Inizia Quiz
                 </button>
             </form>
@@ -48,6 +46,15 @@
                     📤 Carica File
                 </button>
             </form>
+        </div>
+        <!-- Aggiungi questa sezione dove preferisci -->
+        <div class="mt-8 bg-blue-50 p-6 rounded-lg">
+            <h3 class="text-xl font-bold mb-4">Quiz da CSV Dedicato</h3>
+            <p class="mb-4">Vuoi usare un CSV specifico solo per questo quiz?</p>
+            <a href="{{ url_for('start_quiz') }}"
+                class="inline-block bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600">
+                🎯 Crea Quiz con Nuovo CSV
+            </a>
         </div>
     </div>
 </div>

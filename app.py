@@ -224,6 +224,159 @@ class QuizManager:
         
         self.load_existing_questions(force=True)
 
+# Aggiungi queste costanti
+QUIZ_TEMP_FOLDER = 'quiz_temp'
+app.config['QUIZ_TEMP_FOLDER'] = QUIZ_TEMP_FOLDER
+os.makedirs(QUIZ_TEMP_FOLDER, exist_ok=True)
+
+@app.route('/quiz', methods=['GET', 'POST'])
+def start_quiz():
+    if request.method == 'POST':
+        try:
+            # Controlla se stiamo caricando un CSV specifico per il quiz
+            if 'quiz_csv' in request.files and request.files['quiz_csv'].filename:
+                file = request.files['quiz_csv']
+                
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(f"temp_{session.sid}_{file.filename}")
+                    temp_path = os.path.join(app.config['QUIZ_TEMP_FOLDER'], filename)
+                    file.save(temp_path)
+                    
+                    questions = load_questions_from_csv(temp_path)
+                    os.remove(temp_path)
+
+                    if not questions:
+                        flash('Il CSV non contiene domande valide', 'error')
+                        return redirect(url_for('index'))
+                else:
+                    flash('Formato file non supportato', 'error')
+                    return redirect(url_for('index'))
+            else:
+                # Usa il database esistente di domande
+                if not quiz_manager.questions:
+                    flash('Non ci sono domande disponibili. Carica un file CSV prima.', 'error')
+                    return redirect(url_for('index'))
+                questions = quiz_manager.questions
+            
+            # Modifica qui per la randomizzazione
+            num_q = min(int(request.form['question_count']), len(questions))
+            num_q = max(5, min(num_q, len(questions)))
+            num_q = (num_q // 5) * 5
+
+            # Randomizza l'ordine delle domande
+            sampled_questions = random.sample(questions, num_q)
+
+            shuffled_data = []
+            for q in sampled_questions:
+                # Randomizza le opzioni per ogni domanda
+                options = q['options'].copy()
+                random.shuffle(options)
+                correct_idx = options.index(q['options'][q['correct']])
+                shuffled_data.append({
+                    'options': options,
+                    'correct_idx': correct_idx
+                })
+
+            session.update({
+                'questions': sampled_questions,  # Usa le domande randomizzate
+                'answers': [None] * num_q,
+                'current': 0,
+                'total': num_q,
+                'shuffled': shuffled_data,
+                'quiz_source': getattr(file, 'filename', 'database') if 'file' in locals() else 'database'
+            })
+            
+            return redirect(url_for('show_quiz'))
+        
+        except Exception as e:
+            flash(f"Errore: {str(e)}", 'error')
+            return redirect(url_for('index'))
+    
+    return render_template('quiz_start.html')
+
+@app.route('/retry-wrong', methods=['POST'])
+def retry_wrong_questions():
+    if 'answers' not in session or 'questions' not in session or 'shuffled' not in session:
+        flash('Sessione scaduta, riavvia il quiz', 'error')
+        return redirect(url_for('index'))
+    
+    # Raccogli le domande sbagliate
+    wrong_questions = []
+    wrong_indices = []
+    
+    for i in range(session['total']):
+        if session['answers'][i] != session['shuffled'][i]['correct_idx']:
+            wrong_questions.append(session['questions'][i])
+            wrong_indices.append(i)
+    
+    if not wrong_questions:
+        flash('Hai risposto correttamente a tutte le domande!', 'success')
+        return redirect(url_for('index'))
+    
+    # Crea un nuovo quiz con le domande sbagliate
+    num_q = len(wrong_questions)
+    shuffled_data = []
+    
+    for q in wrong_questions:
+        options = q['options'].copy()
+        random.shuffle(options)
+        correct_idx = options.index(q['options'][q['correct']])
+        shuffled_data.append({
+            'options': options,
+            'correct_idx': correct_idx
+        })
+    
+    # Aggiorna la sessione con il nuovo quiz
+    session.update({
+        'questions': wrong_questions,
+        'answers': [None] * num_q,
+        'current': 0,
+        'total': num_q,
+        'shuffled': shuffled_data,
+        'is_retry': True  # Flag per indicare che è un quiz di ripetizione
+    })
+    
+    return redirect(url_for('show_quiz'))
+
+def load_questions_from_csv(filepath):
+    questions = []
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            required_cols = ['Domanda','Opzione1','Opzione2','Opzione3','Opzione4','Corretta']
+            
+            if not all(col in reader.fieldnames for col in required_cols):
+                return []
+            
+            for row in reader:
+                try:
+                    question_text = row['Domanda'].strip()
+                    options = [
+                        row['Opzione1'].strip(),
+                        row['Opzione2'].strip(),
+                        row['Opzione3'].strip(),
+                        row['Opzione4'].strip()
+                    ]
+                    
+                    correct = row['Corretta'].strip().upper()
+                    if correct in {'A', 'B', 'C', 'D'}:
+                        correct_num = ord(correct) - ord('A') + 1
+                    else:
+                        correct_num = int(correct)
+                    
+                    if 1 <= correct_num <= 4:
+                        questions.append({
+                            'question': question_text,
+                            'options': options,
+                            'correct': correct_num - 1
+                        })
+                except:
+                    continue
+    except Exception as e:
+        print(f"Errore lettura CSV: {str(e)}")
+    
+    return questions
+
 quiz_manager = QuizManager()
 
 @app.context_processor
@@ -425,36 +578,6 @@ def delete_question(hash_id):
     
     return redirect(url_for('manage_questions'))
 
-@app.route('/quiz', methods=['POST'])
-def start_quiz():
-    try:
-        num_q = min(int(request.form['question_count']), 60)
-        num_q = max(5, min(num_q, len(quiz_manager.questions)))
-        num_q = (num_q // 5) * 5
-
-        sampled_questions = random.sample(quiz_manager.questions, num_q)
-        shuffled_data = []
-        for q in sampled_questions:
-            options = q['options'].copy()
-            random.shuffle(options)
-            correct_idx = options.index(q['options'][q['correct']])
-            shuffled_data.append({
-                'options': options,
-                'correct_idx': correct_idx
-            })
-
-        session.update({
-            'questions': sampled_questions,
-            'answers': [None] * num_q,
-            'current': 0,
-            'total': num_q,
-            'shuffled': shuffled_data
-        })
-        
-        return redirect(url_for('show_quiz'))
-    except Exception as e:
-        flash(f"Errore: {str(e)}", 'error')
-        return redirect(url_for('index'))
 
 @app.route('/quiz/show', methods=['GET', 'POST'])
 def show_quiz():

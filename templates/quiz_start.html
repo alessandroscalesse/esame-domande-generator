@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-bold mb-6">Crea Nuovo Quiz da CSV</h2>
+        
+        <form method="POST" enctype="multipart/form-data">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Carica il tuo CSV:</label>
+                    <input type="file" name="quiz_csv" 
+                           class="w-full p-2 border rounded" 
+                           accept=".csv" required>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Formato richiesto: Domanda, Opzione1-4, Corretta
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">
+                        Numero di domande (multipli di 5):
+                    </label>
+                    <input type="number" name="question_count" 
+                           min="5" max="60" step="5" value="20"
+                           class="w-full p-2 border rounded" required>
+                </div>
+
+                <button type="submit" 
+                        class="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600">
+                    🚀 Inizia Quiz con Questo CSV
+                </button>
+            </div>
+        </form>
+
+        <div class="mt-6 text-center">
+            <a href="{{ url_for('index') }}" 
+               class="text-blue-500 hover:text-blue-600">
+                ← Torna alla pagina principale
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
